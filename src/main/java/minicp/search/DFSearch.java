@@ -20,6 +20,7 @@ import minicp.util.InconsistencyException;
 
 import java.util.LinkedList;
 import java.util.List;
+import java.util.Stack;
 
 public class DFSearch {
 
@@ -77,6 +78,9 @@ public class DFSearch {
     }
 
 
+    /*
+    * Recursive version
+    */
     private void dfs(SearchStatistics statistics, SearchLimit limit) {
         if (limit.stopSearch(statistics)) throw new StopSearchException();
         Alternative [] alternatives = choice.call();
@@ -99,6 +103,58 @@ public class DFSearch {
             }
         }
     }
+
+    /*
+    * Iterative version using stacks
+    */
+    private void dfs_iterative(SearchStatistics statistics, SearchLimit limit) {
+
+        Stack<Alternative> alternativeStack = new Stack<>();
+        Stack<Integer> levelStack = new Stack<>();
+
+        Alternative current;
+
+        do {
+            // Stopping condition
+            if (limit.stopSearch(statistics)) throw new StopSearchException();
+
+            Alternative[] alternatives = choice.call();
+
+            // If this is not a leaf
+            if (alternatives.length > 0) {
+
+                state.push();
+                levelStack.push(alternatives.length);
+
+                for (Alternative alt : alternatives) {
+                    alternativeStack.push(alt);
+                    statistics.nNodes++;
+                }
+
+                // Current visited node is a the top of the stack
+                current = alternativeStack.peek();
+
+                // Only call on non-leafs
+                try {
+                    current.call();
+                } catch (InconsistencyException e) {
+                    notifyFailure();
+                    statistics.nFailures++;
+                }
+            }
+            // If it is a leaf
+            else {
+                //
+                state.pop();
+                alternativeStack.pop();
+                statistics.nSolutions++;
+                notifySolutionFound();
+                state.push();
+            }
+        }
+        while (!alternativeStack.isEmpty());
+    }
+
 }
 
 
