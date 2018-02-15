@@ -17,8 +17,12 @@
 package minicp.engine.constraints;
 
 import static minicp.cp.Factory.*;
+
+import com.sun.org.apache.regexp.internal.RE;
 import minicp.engine.core.Constraint;
+import minicp.engine.core.ConstraintClosure;
 import minicp.engine.core.IntVar;
+import minicp.engine.core.IntVarImpl;
 import minicp.reversible.ReversibleInt;
 import minicp.util.InconsistencyException;
 import minicp.util.NotImplementedException;
@@ -29,6 +33,7 @@ public class Circuit extends Constraint {
     private final ReversibleInt [] dest;
     private final ReversibleInt [] orig;
     private final ReversibleInt [] lengthToDest;
+    private final int nbNodes;
 
     /**
      * x represents an Hamiltonian circuit on the cities {0..x.length-1}
@@ -38,6 +43,7 @@ public class Circuit extends Constraint {
     public Circuit(IntVar [] x) {
         super(x[0].getSolver());
         this.x = x;
+        this.nbNodes = x.length;
         dest = new ReversibleInt[x.length];
         orig = new ReversibleInt[x.length];
         lengthToDest = new ReversibleInt[x.length];
@@ -52,13 +58,38 @@ public class Circuit extends Constraint {
     @Override
     public void post() throws InconsistencyException {
         cp.post(allDifferent(x));
-        throw new NotImplementedException("Circuit");
-        // TODO
-        // Hint: use x[i].whenBind(...) to call the bind
+        if (nbNodes > 1){
+            for (int i = 0; i < nbNodes; i++) {
+                if (x[i].isBound()){
+                    bind(i);
+                } else {
+                    final int j = i;
+                    x[i].remove(i);
+                    x[i].removeAbove(nbNodes - 1);
+                    x[i].removeBelow(0);
+                    x[i].whenBind(() -> {
+                        bind(j);
+                    });
+                }
+            }
+        }
     }
-
 
     private void bind(int i) throws InconsistencyException {
-        throw new NotImplementedException("Circuit");
+        int length = lengthToDest[x[i].getMin()].getValue() + 1;
+        for (int k = 0; k < nbNodes; k++){
+            if (orig[k].getValue() == x[i].getMin()){
+                orig[k].setValue(orig[i].getValue());
+            }
+            if (dest[k].getValue() == i){
+                dest[k].setValue(dest[x[i].getMin()].getValue());
+                lengthToDest[k].setValue(lengthToDest[k].getValue() + length);
+            }
+            if ((lengthToDest[k].getValue() == 0) && (lengthToDest[orig[k].getValue()].getValue() < nbNodes - 1)){
+                x[k].remove(orig[k].getValue());
+            }
+        }
     }
+
+
 }

@@ -11,3 +11,4 @@ It is used in an educational purpose within my Constraint Programming course.
 * method post from __IsLessOrEqual__ ;
 * <del>DFSearch iterative version ;</del>
 * Element1D ;
+* Circuit impl ;
